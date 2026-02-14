@@ -35,6 +35,17 @@
 | 3 | Affiliate link generation | Done |
 | 4 | Listing detail fetch | Done |
 | 5 | UPC/catalog extraction helpers | Done |
+| 6 | Lint + full test pass | Done |
+
+## Plan 4: Matching Engine
+
+| Step | Description | Status |
+|------|------------|--------|
+| 1 | MatchResult dataclass + FUZZY_SCORE_CUTOFF constant | Done |
+| 2 | Tier 1 — catalog number matching | |
+| 3 | Tier 2 — barcode/UPC matching | |
+| 4 | Tier 3 — fuzzy artist+title matching | |
+| 5 | Unified match_listing() function | |
 | 6 | Lint + full test pass | |
 
 ## Notes
@@ -61,3 +72,5 @@
 - Plan 3 Step 3: `ebay.py` — Added `make_affiliate_url(item_web_url, campaign_id)` method on `EbayClient`: returns URL unchanged if `campaign_id` is empty, otherwise appends eBay Partner Network params (`mkevt`, `mkcid`, `mkrid`, `campid`, `toolid`) via `urllib.parse`. Preserves existing query params. 3 tests in `test_ebay_affiliate.py` (full params, empty campaign, existing params preserved). All 10 eBay tests pass, ruff clean.
 - Plan 3 Step 4: `ebay.py` — Added `get_item(item_id)` async method: ensures token, rate-limits, GETs `/buy/browse/v1/item/{item_id}`, returns `None` on 404, raises `EbayAPIError` on other errors. Parses response into dict with `item_id`, `title`, `description`, `localized_aspects`, `item_location`, `price`, `currency`, `condition`, `item_web_url`. 3 tests in `test_ebay_item.py` (200 with UPC in aspects, 404, 500 error). All 13 eBay tests pass, ruff clean.
 - Plan 3 Step 5: `ebay.py` — Added 3 standalone extraction helpers: `extract_upc(item_aspects)` scans `localizedAspects` for UPC/EAN entries; `extract_catalog_no_from_title(title)` uses regex (`_CATALOG_RE`) to find catalog patterns like `BLP-4003`, `MFSL 1-234`, `APP 3014`; `normalize_catalog(cat_no)` strips spaces/dashes/underscores/dots and uppercases. 11 tests in `test_ebay_extract.py`. All 24 eBay tests pass, ruff clean.
+- Plan 3 Step 6: `ruff check` on `ebay.py` + all test files — all checks passed. `pytest tests/test_ebay*.py -v` — 24/24 passed (0.49s). **Plan 3 complete.**
+- Plan 4 Step 1: `matcher.py` — Created `MatchResult` frozen dataclass (release_id, artist, title, median_price, method, score) and `FUZZY_SCORE_CUTOFF = 85` constant. 3 tests in `test_matcher.py` (field access, None price, cutoff value). All 3 pass, ruff clean.
