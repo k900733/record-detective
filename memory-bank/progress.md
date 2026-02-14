@@ -64,7 +64,7 @@
 | Step | Description | Status |
 |------|------------|--------|
 | 1 | pipeline.py — scan_and_score() | Done |
-| 2 | eBay polling loop | |
+| 2 | eBay polling loop | Done |
 | 3 | Discogs refresh loop | |
 | 4 | Cleanup loop | |
 | 5 | __main__.py full async orchestrator | |
@@ -109,3 +109,4 @@
 - Plan 5 Step 5: `telegram_bot.py` — Added `send_deal_alerts(bot, conn, deals, affiliate_campaign_id="")` async function: fetches all active searches, filters by `min_deal_score <= deal.deal_score`, skips already-alerted `(chat_id, item_id)` pairs via `was_alerted()`, builds affiliate URL inline (eBay Partner Network params), formats via `format_deal_message()`, sends via `bot.send_message(parse_mode="HTML")`, logs via `log_alert()` and `mark_notified()`. Per-send error handling with logging. 7 tests in `test_telegram_alerts.py` (basic send, duplicate suppression, multi-chat, threshold filtering, affiliate URL, mark_notified, error continuation). All 29 scorer+telegram tests pass, ruff clean.
 - Plan 5 Step 6: `ruff check` on `scorer.py`, `telegram_bot.py` + all test files — all checks passed. `pytest tests/test_scorer*.py tests/test_telegram*.py -v` — 29/29 passed (0.33s). **Plan 5 complete.**
 - Plan 6 Step 1: `pipeline.py` — Created `scan_and_score(ebay_client, conn, search_query)` async function: searches eBay, extracts catalog number from title first (skips `get_item` if found), falls back to `get_item` + `extract_upc` for UPC enrichment, runs 3-tier `match_listing`, scores via `score_deal`, persists via `upsert_listing` + `update_listing_match`. 4 tests in `test_pipeline.py` (3-listings-1-deal, empty results, all-match-and-DB-stored, catalog-skips-get_item). All 4 pass, ruff clean. Full suite: 139 passed, 3 pre-existing failures unchanged.
+- Plan 6 Step 2: `pipeline.py` — Added `poll_ebay_loop(ebay_client, conn, bot, config)` async function: infinite loop that fetches active searches via `get_active_searches()`, runs `scan_and_score()` per search, filters deals by `min_deal_score`, sends alerts via `send_deal_alerts()` with `config.affiliate_campaign_id`, sleeps `config.ebay_poll_minutes * 60` seconds. Try/except around loop body for resilience. Also added `affiliate_campaign_id` field to `Config` (optional, default empty). 4 tests in `test_poll_loop.py` (scan+alerts called, threshold filtering, multi-search scanning, error resilience). All 4 pass, ruff clean. Full suite: 143 passed, 3 pre-existing failures unchanged.

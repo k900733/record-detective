@@ -13,6 +13,7 @@ class Config:
     db_path: str = "vinyl_detective.db"
     ebay_poll_minutes: int = 30
     discogs_refresh_days: int = 7
+    affiliate_campaign_id: str = ""
 
 
 _REQUIRED_KEYS = ("DISCOGS_TOKEN", "EBAY_APP_ID", "EBAY_CERT_ID", "TELEGRAM_TOKEN")
@@ -31,4 +32,5 @@ def load_config() -> Config:
         db_path=os.environ.get("DB_PATH", "vinyl_detective.db"),
         ebay_poll_minutes=int(os.environ.get("EBAY_POLL_MINUTES", "30")),
         discogs_refresh_days=int(os.environ.get("DISCOGS_REFRESH_DAYS", "7")),
+        affiliate_campaign_id=os.environ.get("AFFILIATE_CAMPAIGN_ID", ""),
     )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sqlite3
 
@@ -73,3 +74,32 @@ async def scan_and_score(
 
     log.info("scan_and_score(%r): %d listings -> %d deals", search_query, len(listings), len(deals))
     return deals
+
+
+async def poll_ebay_loop(ebay_client, conn, bot, config):
+    """Poll eBay for deals on all active saved searches, send alerts, repeat."""
+    from vinyl_detective.db import get_active_searches
+    from vinyl_detective.telegram_bot import send_deal_alerts
+
+    while True:
+        try:
+            searches = get_active_searches(conn)
+            for search in searches:
+                deals = await scan_and_score(ebay_client, conn, search["query"])
+                filtered = [
+                    d for d in deals
+                    if d.deal_score >= search["min_deal_score"]
+                ]
+                if filtered:
+                    await send_deal_alerts(
+                        bot, conn, filtered, config.affiliate_campaign_id
+                    )
+                log.info(
+                    "poll_ebay: search=%r found %d deals (%d after filter)",
+                    search["query"],
+                    len(deals),
+                    len(filtered),
+                )
+        except Exception:
+            log.exception("poll_ebay_loop iteration failed")
+        await asyncio.sleep(config.ebay_poll_minutes * 60)
