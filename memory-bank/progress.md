@@ -11,7 +11,7 @@
 | 5 | db.py - other tables CRUD | Done |
 | 6 | db.py - FTS5 search | Done |
 | 7 | rate_limiter.py | Done |
-| 8 | __main__.py startup wiring | Pending |
+| 8 | __main__.py startup wiring | Done |
 | 9 | Lint + full test pass | Pending |
 
 ## Notes
@@ -24,3 +24,4 @@
 - Step 5: `db.py` — Added 10 CRUD functions for remaining tables: `saved_searches` (add_search, get_active_searches, get_searches_for_chat, toggle_search), `ebay_listings` (upsert_listing, update_listing_match, get_unnotified_deals, mark_notified), `alert_log` (log_alert, was_alerted). 11 tests in `test_db_crud.py`. All 27 tests pass, ruff clean.
 - Step 6: `db.py` — Added `fts5_search(conn, query, limit=50)` function: strips punctuation, tokenizes query for FTS5 implicit AND, joins `releases_fts` back to `discogs_releases`, orders by rank. 5 tests in `test_db_fts.py`. All 32 tests pass, ruff clean.
 - Step 7: `rate_limiter.py` — `RateLimiter` class with `calls_per_minute` constructor, `interval`-based delay, `asyncio.Lock` for concurrency safety, `time.monotonic()` for timing. Async `wait()` method sleeps the remaining interval if called too soon. 3 tests in `test_rate_limiter.py` (delay enforcement, high-rate throughput, no-delay-after-interval). Installed `pytest-asyncio`. All 35 tests pass, ruff clean.
+- Step 8: `__main__.py` — Calls `load_config()` then `init_db(config.db_path)`, prints startup message, closes connection and exits. 3 tests in `test_main.py` (subprocess: prints message + exit 0, creates DB file, fails without env vars). All 38 tests pass.
