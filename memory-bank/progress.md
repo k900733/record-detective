@@ -31,8 +31,8 @@
 | Step | Description | Status |
 |------|------------|--------|
 | 1 | EbayClient class with OAuth2 token management | Done |
-| 2 | Listing search method | |
-| 3 | Affiliate link generation | |
+| 2 | Listing search method | Done |
+| 3 | Affiliate link generation | Done |
 | 4 | Listing detail fetch | |
 | 5 | UPC/catalog extraction helpers | |
 | 6 | Lint + full test pass | |
@@ -57,3 +57,5 @@
 - Plan 2 Step 6: `discogs.py` — Added `search_releases(query, format_=None, per_page=50)` async method on `DiscogsClient`: rate-limits, GETs `/database/search` with params (q, type=release, per_page, optional format), raises `DiscogsAPIError` on non-200. Parses `results` list into dicts with `release_id`, `title`, `format`, `catalog_no`. 4 tests in `test_discogs_search.py` (200 with 3 results, empty results, format param passthrough, 500 error). All 66 tests pass (same 3 pre-existing failures), ruff clean.
 - Plan 2 Step 7: `ruff check` on `discogs.py` + all test files — all checks passed. `pytest tests/test_discogs*.py -v` — 28/28 passed (1.19s). Full suite: 63 passed, 3 pre-existing failures unchanged. **Plan 2 complete.**
 - Plan 3 Step 1: `ebay.py` — `EbayClient` class with `httpx.AsyncClient` (base_url `api.ebay.com`, user-agent, 30s timeout), async context manager, `_ensure_token()` OAuth2 client-credentials flow (POST to `/identity/v1/oauth2/token` with Basic auth, 60s expiry buffer). `EbayAPIError` exception class. 4 tests in `test_ebay_auth.py` (first-call fetch, cached second call, refresh after expiry, 401 error). All 4 pass, ruff clean.
+- Plan 3 Step 2: `ebay.py` — Added `search_listings(query, limit=200)` async method: ensures token, rate-limits, GETs `/buy/browse/v1/item_summary/search` with Bearer auth, `EBAY_US` marketplace, `FIXED_PRICE` filter, Records category `176985`. Parses `itemSummaries` into dicts with `item_id`, `title`, `price`, `currency`, `condition`, `seller_rating`, `image_url`, `item_web_url`, `shipping`. 3 tests in `test_ebay_search.py` (2-item parse, empty results, 401 error). All 7 eBay tests pass, ruff clean.
+- Plan 3 Step 3: `ebay.py` — Added `make_affiliate_url(item_web_url, campaign_id)` method on `EbayClient`: returns URL unchanged if `campaign_id` is empty, otherwise appends eBay Partner Network params (`mkevt`, `mkcid`, `mkrid`, `campid`, `toolid`) via `urllib.parse`. Preserves existing query params. 3 tests in `test_ebay_affiliate.py` (full params, empty campaign, existing params preserved). All 10 eBay tests pass, ruff clean.

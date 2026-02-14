@@ -1,6 +1,7 @@
 """eBay Browse API client with OAuth2 authentication."""
 
 import time
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import httpx
 
@@ -58,3 +59,68 @@ class EbayClient:
         data = resp.json()
         self._access_token = data["access_token"]
         self._token_expires = time.time() + data["expires_in"]
+
+    async def search_listings(
+        self, query: str, limit: int = 200
+    ) -> list[dict]:
+        """Search eBay Browse API for fixed-price record listings."""
+        await self._ensure_token()
+        await self.rate_limiter.wait()
+        resp = await self._client.get(
+            "/buy/browse/v1/item_summary/search",
+            headers={
+                "Authorization": f"Bearer {self._access_token}",
+                "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+            },
+            params={
+                "q": query,
+                "limit": limit,
+                "filter": "buyingOptions:{FIXED_PRICE}",
+                "category_ids": "176985",
+            },
+        )
+        if resp.status_code != 200:
+            raise EbayAPIError(resp.status_code, resp.text)
+        data = resp.json()
+        items = data.get("itemSummaries", [])
+        results: list[dict] = []
+        for item in items:
+            shipping = 0.0
+            ship_opts = item.get("shippingOptions")
+            if ship_opts:
+                cost = ship_opts[0].get("shippingCost", {})
+                shipping = float(cost.get("value", 0))
+            results.append({
+                "item_id": item["itemId"],
+                "title": item["title"],
+                "price": float(item["price"]["value"]),
+                "currency": item["price"]["currency"],
+                "condition": item.get("condition"),
+                "seller_rating": item.get("seller", {}).get(
+                    "feedbackPercentage"
+                ),
+                "image_url": item.get("image", {}).get("imageUrl"),
+                "item_web_url": item.get("itemWebUrl"),
+                "shipping": shipping,
+            })
+        return results
+
+    def make_affiliate_url(
+        self, item_web_url: str, campaign_id: str = ""
+    ) -> str:
+        """Append eBay Partner Network tracking params to a listing URL."""
+        if not campaign_id:
+            return item_web_url
+        parsed = urlparse(item_web_url)
+        existing = parse_qs(parsed.query, keep_blank_values=True)
+        epn_params = {
+            "mkevt": "1",
+            "mkcid": "1",
+            "mkrid": "711-53200-19255-0",
+            "campid": campaign_id,
+            "toolid": "10001",
+        }
+        existing.update(epn_params)
+        flat = {k: v if isinstance(v, str) else v[0] for k, v in existing.items()}
+        new_query = urlencode(flat)
+        return urlunparse(parsed._replace(query=new_query))
