@@ -48,6 +48,17 @@
 | 5 | Unified match_listing() function | Done |
 | 6 | Lint + full test pass | |
 
+## Plan 5: Deal Scorer & Telegram Alerts
+
+| Step | Description | Status |
+|------|------------|--------|
+| 1 | scorer.py — Deal dataclass + score_deal() | Done |
+| 2 | Deal filtering function | |
+| 3 | telegram_bot.py — alert formatter | |
+| 4 | Telegram bot command handlers | |
+| 5 | Alert sending function | |
+| 6 | Lint + full test pass | |
+
 ## Notes
 
 - Using python3.12 (`/usr/bin/python3.12`)
@@ -60,6 +71,7 @@
 - Step 7: `rate_limiter.py` — `RateLimiter` class with `calls_per_minute` constructor, `interval`-based delay, `asyncio.Lock` for concurrency safety, `time.monotonic()` for timing. Async `wait()` method sleeps the remaining interval if called too soon. 3 tests in `test_rate_limiter.py` (delay enforcement, high-rate throughput, no-delay-after-interval). Installed `pytest-asyncio`. All 35 tests pass, ruff clean.
 - Step 8: `__main__.py` — Calls `load_config()` then `init_db(config.db_path)`, prints startup message, closes connection and exits. 3 tests in `test_main.py` (subprocess: prints message + exit 0, creates DB file, fails without env vars). All 38 tests pass.
 - Step 9: `ruff check` — all checks passed. `pytest tests/ -v` — all 38 tests pass (1.76s). Plan 1 complete.
+- Plan 5 Step 1: `scorer.py` — `Deal` frozen dataclass (item_id, ebay_title, ebay_price, shipping, condition, seller_rating, match, deal_score, priority, item_web_url) + `score_deal(ebay_listing, match)` function: returns None if no median price or overpriced, computes `(median - total) / median`, assigns priority (high >= 0.40, medium >= 0.25, else low). 5 tests in `test_scorer.py`. All pass, ruff clean.
 - Plan 2 Step 1: `discogs.py` — `DiscogsClient` class with `httpx.AsyncClient` (base_url, auth header, user-agent, 30s timeout), async context manager. Installed httpx. 5 tests in `test_discogs.py`. All 43 tests pass, ruff clean.
 - Plan 2 Step 2: `discogs.py` — Added `get_release(release_id)` async method: rate-limits, GETs `/releases/{id}`, returns None on 404, raises `DiscogsAPIError` on other errors. `_parse_release()` helper extracts `release_id`, `artist` (strips trailing ` (N)` disambiguation), `title`, `catalog_no`, `barcode`, `format`. 8 tests in `test_discogs_release.py` (parse full/stripped/missing/no-barcode, HTTP 200/404/429/500). All 51 tests pass, ruff clean.
 - Plan 2 Step 3: `discogs.py` — Added `get_price_stats(release_id)` async method: uses `/marketplace/price_suggestions/{id}` (requires seller settings configured). Returns `{"median_price": float, "low_price": float}` from VG+ and Good conditions, or None if 404/no VG+ data. 4 tests in `test_discogs_price.py` (200 full, 200 missing VG+, 404, 500). All 55 tests pass, ruff clean.
