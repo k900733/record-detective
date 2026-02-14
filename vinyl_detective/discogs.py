@@ -98,3 +98,68 @@ def _parse_release(data: dict) -> dict:
         "barcode": barcode,
         "format": fmt,
     }
+
+
+async def fetch_and_cache_release(
+    client: DiscogsClient,
+    conn,
+    release_id: int,
+) -> bool:
+    """Fetch release + prices from Discogs and cache in the DB. Returns True on success."""
+    from vinyl_detective.db import upsert_release
+
+    release = await client.get_release(release_id)
+    if release is None:
+        return False
+
+    prices = await client.get_price_stats(release_id)
+    median_price = None
+    low_price = None
+    if prices is not None:
+        median_price = prices["median_price"]
+        low_price = prices["low_price"]
+
+    upsert_release(
+        conn,
+        release_id=release["release_id"],
+        artist=release["artist"],
+        title=release["title"],
+        catalog_no=release["catalog_no"],
+        barcode=release["barcode"],
+        format_=release["format"],
+        median_price=median_price,
+        low_price=low_price,
+    )
+    return True
+
+async def refresh_stale_prices(
+    client: DiscogsClient,
+    conn,
+    max_age_days: int = 7,
+) -> int:
+    """Re-fetch prices for releases whose updated_at is stale. Returns count refreshed."""
+    from vinyl_detective.db import get_stale_releases, upsert_release
+
+    stale = get_stale_releases(conn, max_age_days)
+    refreshed = 0
+    for row in stale:
+        rid = row["release_id"]
+        try:
+            prices = await client.get_price_stats(rid)
+            if prices is None:
+                continue
+            upsert_release(
+                conn,
+                release_id=rid,
+                artist=row["artist"],
+                title=row["title"],
+                catalog_no=row.get("catalog_no"),
+                barcode=row.get("barcode"),
+                format_=row.get("format"),
+                median_price=prices["median_price"],
+                low_price=prices["low_price"],
+            )
+            refreshed += 1
+        except Exception:
+            continue
+    return refreshed
