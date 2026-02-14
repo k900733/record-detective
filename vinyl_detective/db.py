@@ -1,5 +1,6 @@
 """SQLite database layer for Vinyl Detective."""
 
+import re
 import sqlite3
 import time
 
@@ -284,3 +285,26 @@ def was_alerted(
         (chat_id, item_id),
     ).fetchone()
     return row is not None
+
+
+_FTS5_STRIP_RE = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def fts5_search(
+    conn: sqlite3.Connection, query: str, limit: int = 50
+) -> list[dict]:
+    """Full-text search on releases_fts, returning matched discogs_releases rows."""
+    tokens = _FTS5_STRIP_RE.sub("", query).split()
+    if not tokens:
+        return []
+    fts_query = " ".join(tokens)
+    rows = conn.execute(
+        """SELECT r.release_id, r.artist, r.title, r.catalog_no, r.median_price
+           FROM releases_fts f
+           JOIN discogs_releases r ON r.release_id = f.rowid
+           WHERE f.releases_fts MATCH ?
+           ORDER BY f.rank
+           LIMIT ?""",
+        (fts_query, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
