@@ -66,7 +66,7 @@
 | 1 | pipeline.py — scan_and_score() | Done |
 | 2 | eBay polling loop | Done |
 | 3 | Discogs refresh loop | Done |
-| 4 | Cleanup loop | |
+| 4 | Cleanup loop | Done |
 | 5 | __main__.py full async orchestrator | |
 | 6 | Graceful shutdown handling | |
 | 7 | End-to-end integration test | |
@@ -111,3 +111,4 @@
 - Plan 6 Step 1: `pipeline.py` — Created `scan_and_score(ebay_client, conn, search_query)` async function: searches eBay, extracts catalog number from title first (skips `get_item` if found), falls back to `get_item` + `extract_upc` for UPC enrichment, runs 3-tier `match_listing`, scores via `score_deal`, persists via `upsert_listing` + `update_listing_match`. 4 tests in `test_pipeline.py` (3-listings-1-deal, empty results, all-match-and-DB-stored, catalog-skips-get_item). All 4 pass, ruff clean. Full suite: 139 passed, 3 pre-existing failures unchanged.
 - Plan 6 Step 2: `pipeline.py` — Added `poll_ebay_loop(ebay_client, conn, bot, config)` async function: infinite loop that fetches active searches via `get_active_searches()`, runs `scan_and_score()` per search, filters deals by `min_deal_score`, sends alerts via `send_deal_alerts()` with `config.affiliate_campaign_id`, sleeps `config.ebay_poll_minutes * 60` seconds. Try/except around loop body for resilience. Also added `affiliate_campaign_id` field to `Config` (optional, default empty). 4 tests in `test_poll_loop.py` (scan+alerts called, threshold filtering, multi-search scanning, error resilience). All 4 pass, ruff clean. Full suite: 143 passed, 3 pre-existing failures unchanged.
 - Plan 6 Step 3: `pipeline.py` — Added `refresh_discogs_loop(discogs_client, conn, config)` async function: infinite loop that calls `refresh_stale_prices()` with `config.discogs_refresh_days`, logs count, sleeps 24 hours. Try/except for resilience. 2 tests in `test_refresh_loop.py` (correct max_age_days passed, error resilience with 2-iteration survival). All 2 pass, ruff clean. Full suite: 145 passed, 3 pre-existing failures unchanged.
+- Plan 6 Step 4: `db.py` — Added `delete_stale_listings(conn, max_age_days=30)` and `delete_stale_alerts(conn, max_age_days=90)`: DELETE rows with `first_seen`/`sent_at` older than cutoff, return rowcount. `pipeline.py` — Added `cleanup_stale_loop(conn)`: infinite loop calling both cleanup functions, logs counts, sleeps 24h, try/except for resilience. 4 tests in `test_cleanup.py` (old listings deleted/recent kept, old alerts deleted/recent kept, loop calls both functions, error resilience). All 4 pass, ruff clean. Full suite: 149 passed, 3 pre-existing failures unchanged.

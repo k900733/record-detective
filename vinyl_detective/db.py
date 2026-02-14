@@ -328,3 +328,27 @@ def fts5_search(
         (fts_query, limit),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def delete_stale_listings(
+    conn: sqlite3.Connection, max_age_days: int = 30
+) -> int:
+    """Delete ebay_listings older than max_age_days. Return count deleted."""
+    cutoff = int(time.time()) - max_age_days * 86400
+    cur = conn.execute(
+        "DELETE FROM ebay_listings WHERE first_seen < ?", (cutoff,)
+    )
+    conn.commit()
+    return cur.rowcount
+
+
+def delete_stale_alerts(
+    conn: sqlite3.Connection, max_age_days: int = 90
+) -> int:
+    """Delete alert_log entries older than max_age_days. Return count deleted."""
+    cutoff = int(time.time()) - max_age_days * 86400
+    cur = conn.execute(
+        "DELETE FROM alert_log WHERE sent_at < ?", (cutoff,)
+    )
+    conn.commit()
+    return cur.rowcount

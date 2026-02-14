@@ -118,3 +118,19 @@ async def refresh_discogs_loop(discogs_client, conn, config):
         except Exception:
             log.exception("refresh_discogs_loop iteration failed")
         await asyncio.sleep(24 * 60 * 60)
+
+
+async def cleanup_stale_loop(conn):
+    """Periodically delete old eBay listings and alert log entries."""
+    from vinyl_detective.db import delete_stale_alerts, delete_stale_listings
+
+    while True:
+        try:
+            listings = delete_stale_listings(conn, max_age_days=30)
+            alerts = delete_stale_alerts(conn, max_age_days=90)
+            log.info(
+                "cleanup: removed %d listings, %d alerts", listings, alerts
+            )
+        except Exception:
+            log.exception("cleanup_stale_loop iteration failed")
+        await asyncio.sleep(24 * 60 * 60)
