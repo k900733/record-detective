@@ -41,22 +41,22 @@ async def run() -> None:
             await app.updater.start_polling()
             log.info("Vinyl Detective started")
 
+            stop = asyncio.Event()
             tasks = [
                 asyncio.create_task(
-                    poll_ebay_loop(ebay_client, conn, app.bot, config),
+                    poll_ebay_loop(ebay_client, conn, app.bot, config, shutdown_event=stop),
                     name="poll_ebay",
                 ),
                 asyncio.create_task(
-                    refresh_discogs_loop(discogs_client, conn, config),
+                    refresh_discogs_loop(discogs_client, conn, config, shutdown_event=stop),
                     name="refresh_discogs",
                 ),
                 asyncio.create_task(
-                    cleanup_stale_loop(conn),
+                    cleanup_stale_loop(conn, shutdown_event=stop),
                     name="cleanup",
                 ),
             ]
 
-            stop = asyncio.Event()
             loop = asyncio.get_running_loop()
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, stop.set)
@@ -64,8 +64,6 @@ async def run() -> None:
             await stop.wait()
             log.info("Shutdown signal received")
 
-            for t in tasks:
-                t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
 
             await app.updater.stop()

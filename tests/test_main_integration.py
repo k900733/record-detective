@@ -149,13 +149,16 @@ async def test_run_passes_correct_config_to_loops(mock_env, config):
             await task
 
     poll_mock.assert_called_once()
-    poll_args = poll_mock.call_args[0]
-    assert len(poll_args) == 4  # ebay_client, conn, bot, config
+    poll_args = poll_mock.call_args
+    assert len(poll_args[0]) == 4  # ebay_client, conn, bot, config
+    assert "shutdown_event" in poll_args[1]
 
     refresh_mock.assert_called_once()
-    refresh_args = refresh_mock.call_args[0]
-    assert len(refresh_args) == 3  # discogs_client, conn, config
+    refresh_args = refresh_mock.call_args
+    assert len(refresh_args[0]) == 3  # discogs_client, conn, config
+    assert "shutdown_event" in refresh_args[1]
 
     cleanup_mock.assert_called_once()
-    cleanup_args = cleanup_mock.call_args[0]
-    assert len(cleanup_args) == 1  # conn
+    cleanup_args = cleanup_mock.call_args
+    assert len(cleanup_args[0]) == 1  # conn
+    assert "shutdown_event" in cleanup_args[1]

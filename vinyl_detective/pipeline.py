@@ -76,12 +76,12 @@ async def scan_and_score(
     return deals
 
 
-async def poll_ebay_loop(ebay_client, conn, bot, config):
+async def poll_ebay_loop(ebay_client, conn, bot, config, shutdown_event=None):
     """Poll eBay for deals on all active saved searches, send alerts, repeat."""
     from vinyl_detective.db import get_active_searches
     from vinyl_detective.telegram_bot import send_deal_alerts
 
-    while True:
+    while not (shutdown_event and shutdown_event.is_set()):
         try:
             searches = get_active_searches(conn)
             for search in searches:
@@ -102,14 +102,21 @@ async def poll_ebay_loop(ebay_client, conn, bot, config):
                 )
         except Exception:
             log.exception("poll_ebay_loop iteration failed")
-        await asyncio.sleep(config.ebay_poll_minutes * 60)
+        if shutdown_event:
+            try:
+                await asyncio.wait_for(shutdown_event.wait(), timeout=config.ebay_poll_minutes * 60)
+                break
+            except asyncio.TimeoutError:
+                continue
+        else:
+            await asyncio.sleep(config.ebay_poll_minutes * 60)
 
 
-async def refresh_discogs_loop(discogs_client, conn, config):
+async def refresh_discogs_loop(discogs_client, conn, config, shutdown_event=None):
     """Periodically refresh stale Discogs price data."""
     from vinyl_detective.discogs import refresh_stale_prices
 
-    while True:
+    while not (shutdown_event and shutdown_event.is_set()):
         try:
             count = await refresh_stale_prices(
                 discogs_client, conn, max_age_days=config.discogs_refresh_days
@@ -117,14 +124,21 @@ async def refresh_discogs_loop(discogs_client, conn, config):
             log.info("refresh_discogs: refreshed %d releases", count)
         except Exception:
             log.exception("refresh_discogs_loop iteration failed")
-        await asyncio.sleep(24 * 60 * 60)
+        if shutdown_event:
+            try:
+                await asyncio.wait_for(shutdown_event.wait(), timeout=24 * 60 * 60)
+                break
+            except asyncio.TimeoutError:
+                continue
+        else:
+            await asyncio.sleep(24 * 60 * 60)
 
 
-async def cleanup_stale_loop(conn):
+async def cleanup_stale_loop(conn, shutdown_event=None):
     """Periodically delete old eBay listings and alert log entries."""
     from vinyl_detective.db import delete_stale_alerts, delete_stale_listings
 
-    while True:
+    while not (shutdown_event and shutdown_event.is_set()):
         try:
             listings = delete_stale_listings(conn, max_age_days=30)
             alerts = delete_stale_alerts(conn, max_age_days=90)
@@ -133,4 +147,11 @@ async def cleanup_stale_loop(conn):
             )
         except Exception:
             log.exception("cleanup_stale_loop iteration failed")
-        await asyncio.sleep(24 * 60 * 60)
+        if shutdown_event:
+            try:
+                await asyncio.wait_for(shutdown_event.wait(), timeout=24 * 60 * 60)
+                break
+            except asyncio.TimeoutError:
+                continue
+        else:
+            await asyncio.sleep(24 * 60 * 60)
