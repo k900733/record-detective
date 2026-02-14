@@ -42,7 +42,7 @@
 | Step | Description | Status |
 |------|------------|--------|
 | 1 | MatchResult dataclass + FUZZY_SCORE_CUTOFF constant | Done |
-| 2 | Tier 1 — catalog number matching | |
+| 2 | Tier 1 — catalog number matching | Done |
 | 3 | Tier 2 — barcode/UPC matching | |
 | 4 | Tier 3 — fuzzy artist+title matching | |
 | 5 | Unified match_listing() function | |
@@ -74,3 +74,4 @@
 - Plan 3 Step 5: `ebay.py` — Added 3 standalone extraction helpers: `extract_upc(item_aspects)` scans `localizedAspects` for UPC/EAN entries; `extract_catalog_no_from_title(title)` uses regex (`_CATALOG_RE`) to find catalog patterns like `BLP-4003`, `MFSL 1-234`, `APP 3014`; `normalize_catalog(cat_no)` strips spaces/dashes/underscores/dots and uppercases. 11 tests in `test_ebay_extract.py`. All 24 eBay tests pass, ruff clean.
 - Plan 3 Step 6: `ruff check` on `ebay.py` + all test files — all checks passed. `pytest tests/test_ebay*.py -v` — 24/24 passed (0.49s). **Plan 3 complete.**
 - Plan 4 Step 1: `matcher.py` — Created `MatchResult` frozen dataclass (release_id, artist, title, median_price, method, score) and `FUZZY_SCORE_CUTOFF = 85` constant. 3 tests in `test_matcher.py` (field access, None price, cutoff value). All 3 pass, ruff clean.
+- Plan 4 Step 2: `matcher.py` — Added `match_by_catalog(conn, ebay_title)`: extracts catalog number via `extract_catalog_no_from_title`, tries exact `lookup_by_catalog` first, then falls back to new `lookup_by_catalog_normalized` in `db.py` (SQL-side REPLACE+UPPER normalization). Returns `MatchResult(method="catalog_no", score=1.0)`. 4 tests in `test_matcher_catalog.py` (exact match, no catalog in title, normalized match, no DB match). All 97 pass (3 pre-existing failures), ruff clean.

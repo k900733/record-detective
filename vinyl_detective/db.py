@@ -137,6 +137,26 @@ def lookup_by_catalog(
     return dict(row) if row else None
 
 
+def lookup_by_catalog_normalized(
+    conn: sqlite3.Connection, catalog_no: str
+) -> dict | None:
+    """Match catalog_no after stripping spaces, dashes, underscores, dots."""
+    normalized = (
+        catalog_no.replace(" ", "")
+        .replace("-", "")
+        .replace("_", "")
+        .replace(".", "")
+        .upper()
+    )
+    row = conn.execute(
+        """SELECT * FROM discogs_releases
+           WHERE REPLACE(REPLACE(REPLACE(REPLACE(
+                   UPPER(catalog_no), ' ', ''), '-', ''), '_', ''), '.', '') = ?""",
+        (normalized,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def lookup_by_barcode(
     conn: sqlite3.Connection, barcode: str
 ) -> dict | None:
