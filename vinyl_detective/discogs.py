@@ -69,6 +69,31 @@ class DiscogsClient:
             "low_price": good["value"] if good else None,
         }
 
+    async def search_releases(
+        self,
+        query: str,
+        format_: str | None = None,
+        per_page: int = 50,
+    ) -> list[dict]:
+        """Search Discogs for releases matching a query."""
+        await self.rate_limiter.wait()
+        params: dict = {"q": query, "type": "release", "per_page": per_page}
+        if format_ is not None:
+            params["format"] = format_
+        resp = await self._client.get("/database/search", params=params)
+        if resp.status_code != 200:
+            raise DiscogsAPIError(resp.status_code, resp.text)
+        results = resp.json().get("results", [])
+        return [
+            {
+                "release_id": r["id"],
+                "title": r.get("title", ""),
+                "format": r.get("format", []),
+                "catalog_no": r.get("catno", ""),
+            }
+            for r in results
+        ]
+
 
 def _parse_release(data: dict) -> dict:
     """Extract relevant fields from a Discogs release JSON."""
