@@ -103,3 +103,18 @@ async def poll_ebay_loop(ebay_client, conn, bot, config):
         except Exception:
             log.exception("poll_ebay_loop iteration failed")
         await asyncio.sleep(config.ebay_poll_minutes * 60)
+
+
+async def refresh_discogs_loop(discogs_client, conn, config):
+    """Periodically refresh stale Discogs price data."""
+    from vinyl_detective.discogs import refresh_stale_prices
+
+    while True:
+        try:
+            count = await refresh_stale_prices(
+                discogs_client, conn, max_age_days=config.discogs_refresh_days
+            )
+            log.info("refresh_discogs: refreshed %d releases", count)
+        except Exception:
+            log.exception("refresh_discogs_loop iteration failed")
+        await asyncio.sleep(24 * 60 * 60)
