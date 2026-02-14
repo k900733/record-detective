@@ -1,0 +1,1 @@
+print("Vinyl Detective starting...")
