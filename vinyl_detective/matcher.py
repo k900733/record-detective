@@ -91,3 +91,16 @@ def match_by_fuzzy(conn, ebay_title: str) -> MatchResult | None:
         method="fuzzy",
         score=score / 100.0,
     )
+
+
+def match_listing(conn, ebay_title: str, upc: str | None = None) -> MatchResult | None:
+    """Unified matching: tries catalog -> barcode -> fuzzy, returns first hit."""
+    result = match_by_catalog(conn, ebay_title)
+    if result is not None:
+        return result
+
+    result = match_by_barcode(conn, upc)
+    if result is not None:
+        return result
+
+    return match_by_fuzzy(conn, ebay_title)

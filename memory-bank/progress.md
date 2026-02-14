@@ -45,7 +45,7 @@
 | 2 | Tier 1 — catalog number matching | Done |
 | 3 | Tier 2 — barcode/UPC matching | Done |
 | 4 | Tier 3 — fuzzy artist+title matching | Done |
-| 5 | Unified match_listing() function | |
+| 5 | Unified match_listing() function | Done |
 | 6 | Lint + full test pass | |
 
 ## Notes
@@ -77,3 +77,4 @@
 - Plan 4 Step 2: `matcher.py` — Added `match_by_catalog(conn, ebay_title)`: extracts catalog number via `extract_catalog_no_from_title`, tries exact `lookup_by_catalog` first, then falls back to new `lookup_by_catalog_normalized` in `db.py` (SQL-side REPLACE+UPPER normalization). Returns `MatchResult(method="catalog_no", score=1.0)`. 4 tests in `test_matcher_catalog.py` (exact match, no catalog in title, normalized match, no DB match). All 97 pass (3 pre-existing failures), ruff clean.
 - Plan 4 Step 3: `matcher.py` — Added `match_by_barcode(conn, upc)`: returns None for None/empty UPC, otherwise calls `db.lookup_by_barcode` and returns `MatchResult(method="barcode", score=1.0)`. 4 tests in `test_matcher_barcode.py` (match, no match in DB, None UPC, empty UPC). All 11 matcher tests pass, ruff clean.
 - Plan 4 Step 4: `matcher.py` — Added `match_by_fuzzy(conn, ebay_title)`: uses `fts5_search` for candidate pre-filtering (limit=50), then `rapidfuzz.process.extractOne` with `token_sort_ratio` scorer and `FUZZY_SCORE_CUTOFF` (85). Returns `MatchResult(method="fuzzy", score=score/100.0)`. Installed rapidfuzz 3.14.3. 4 tests in `test_matcher_fuzzy.py` (Miles Davis match, unrelated no-match, Coltrane match, empty DB). All 15 matcher tests pass, ruff clean.
+- Plan 4 Step 5: `matcher.py` — Added `match_listing(conn, ebay_title, upc=None)`: unified 3-tier cascade (catalog -> barcode -> fuzzy), returns first hit or None. 4 tests in `test_matcher_unified.py` (catalog wins over barcode, barcode fallback, fuzzy fallback, no match). All 19 matcher tests pass, ruff clean.
