@@ -57,7 +57,7 @@
 | 3 | telegram_bot.py — alert formatter | Done |
 | 4 | Telegram bot command handlers | Done |
 | 5 | Alert sending function | Done |
-| 6 | Lint + full test pass | |
+| 6 | Lint + full test pass | Done |
 
 ## Notes
 
@@ -94,3 +94,4 @@
 - Plan 5 Step 3: `telegram_bot.py` — Added `format_deal_message(deal, affiliate_url)`: HTML-formatted Telegram alert with priority tag, artist/title, eBay price+shipping, Discogs median, savings %, condition (omitted if None), match method+confidence, and clickable affiliate link. Uses `html.escape` for safety. 3 tests in `test_telegram_format.py` (key info present, HTML tags, condition=None handling). All 3 pass, ruff clean.
 - Plan 5 Step 4: `telegram_bot.py` — Added `create_bot(token, conn)` returning a configured `Application` (python-telegram-bot v22.6). Six command handlers: `/start` (welcome), `/help` (command list), `/add_search` (creates saved search via `db.add_search`), `/my_searches` (lists searches with ID/status), `/remove_search` (deactivates via `db.toggle_search`), `/set_threshold` (updates `min_deal_score` for all user searches, validated 0-1). DB connection passed via `bot_data["db"]`. 11 tests in `test_telegram_commands.py` (each handler + usage errors + create_bot wiring). All 14 telegram tests pass, ruff clean.
 - Plan 5 Step 5: `telegram_bot.py` — Added `send_deal_alerts(bot, conn, deals, affiliate_campaign_id="")` async function: fetches all active searches, filters by `min_deal_score <= deal.deal_score`, skips already-alerted `(chat_id, item_id)` pairs via `was_alerted()`, builds affiliate URL inline (eBay Partner Network params), formats via `format_deal_message()`, sends via `bot.send_message(parse_mode="HTML")`, logs via `log_alert()` and `mark_notified()`. Per-send error handling with logging. 7 tests in `test_telegram_alerts.py` (basic send, duplicate suppression, multi-chat, threshold filtering, affiliate URL, mark_notified, error continuation). All 29 scorer+telegram tests pass, ruff clean.
+- Plan 5 Step 6: `ruff check` on `scorer.py`, `telegram_bot.py` + all test files — all checks passed. `pytest tests/test_scorer*.py tests/test_telegram*.py -v` — 29/29 passed (0.33s). **Plan 5 complete.**
