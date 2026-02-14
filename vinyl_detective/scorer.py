@@ -52,3 +52,12 @@ def score_deal(ebay_listing: dict, match: MatchResult) -> Deal | None:
         priority=priority,
         item_web_url=ebay_listing["item_web_url"],
     )
+
+
+def filter_deals(deals: list[Deal], min_score: float = 0.25) -> list[Deal]:
+    """Filter deals by minimum score and sort best-first."""
+    return sorted(
+        [d for d in deals if d.deal_score >= min_score],
+        key=lambda d: d.deal_score,
+        reverse=True,
+    )

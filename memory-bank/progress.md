@@ -53,10 +53,10 @@
 | Step | Description | Status |
 |------|------------|--------|
 | 1 | scorer.py — Deal dataclass + score_deal() | Done |
-| 2 | Deal filtering function | |
-| 3 | telegram_bot.py — alert formatter | |
-| 4 | Telegram bot command handlers | |
-| 5 | Alert sending function | |
+| 2 | Deal filtering function | Done |
+| 3 | telegram_bot.py — alert formatter | Done |
+| 4 | Telegram bot command handlers | Done |
+| 5 | Alert sending function | Done |
 | 6 | Lint + full test pass | |
 
 ## Notes
@@ -90,3 +90,7 @@
 - Plan 4 Step 3: `matcher.py` — Added `match_by_barcode(conn, upc)`: returns None for None/empty UPC, otherwise calls `db.lookup_by_barcode` and returns `MatchResult(method="barcode", score=1.0)`. 4 tests in `test_matcher_barcode.py` (match, no match in DB, None UPC, empty UPC). All 11 matcher tests pass, ruff clean.
 - Plan 4 Step 4: `matcher.py` — Added `match_by_fuzzy(conn, ebay_title)`: uses `fts5_search` for candidate pre-filtering (limit=50), then `rapidfuzz.process.extractOne` with `token_sort_ratio` scorer and `FUZZY_SCORE_CUTOFF` (85). Returns `MatchResult(method="fuzzy", score=score/100.0)`. Installed rapidfuzz 3.14.3. 4 tests in `test_matcher_fuzzy.py` (Miles Davis match, unrelated no-match, Coltrane match, empty DB). All 15 matcher tests pass, ruff clean.
 - Plan 4 Step 5: `matcher.py` — Added `match_listing(conn, ebay_title, upc=None)`: unified 3-tier cascade (catalog -> barcode -> fuzzy), returns first hit or None. 4 tests in `test_matcher_unified.py` (catalog wins over barcode, barcode fallback, fuzzy fallback, no match). All 19 matcher tests pass, ruff clean.
+- Plan 5 Step 2: `scorer.py` — Added `filter_deals(deals, min_score=0.25)`: filters deals below threshold, sorts by `deal_score` descending. 3 tests in `test_scorer_filter.py` (default threshold keeps 2/3, high threshold keeps 1/3, empty list). All 8 scorer tests pass, ruff clean.
+- Plan 5 Step 3: `telegram_bot.py` — Added `format_deal_message(deal, affiliate_url)`: HTML-formatted Telegram alert with priority tag, artist/title, eBay price+shipping, Discogs median, savings %, condition (omitted if None), match method+confidence, and clickable affiliate link. Uses `html.escape` for safety. 3 tests in `test_telegram_format.py` (key info present, HTML tags, condition=None handling). All 3 pass, ruff clean.
+- Plan 5 Step 4: `telegram_bot.py` — Added `create_bot(token, conn)` returning a configured `Application` (python-telegram-bot v22.6). Six command handlers: `/start` (welcome), `/help` (command list), `/add_search` (creates saved search via `db.add_search`), `/my_searches` (lists searches with ID/status), `/remove_search` (deactivates via `db.toggle_search`), `/set_threshold` (updates `min_deal_score` for all user searches, validated 0-1). DB connection passed via `bot_data["db"]`. 11 tests in `test_telegram_commands.py` (each handler + usage errors + create_bot wiring). All 14 telegram tests pass, ruff clean.
+- Plan 5 Step 5: `telegram_bot.py` — Added `send_deal_alerts(bot, conn, deals, affiliate_campaign_id="")` async function: fetches all active searches, filters by `min_deal_score <= deal.deal_score`, skips already-alerted `(chat_id, item_id)` pairs via `was_alerted()`, builds affiliate URL inline (eBay Partner Network params), formats via `format_deal_message()`, sends via `bot.send_message(parse_mode="HTML")`, logs via `log_alert()` and `mark_notified()`. Per-send error handling with logging. 7 tests in `test_telegram_alerts.py` (basic send, duplicate suppression, multi-chat, threshold filtering, affiliate URL, mark_notified, error continuation). All 29 scorer+telegram tests pass, ruff clean.
