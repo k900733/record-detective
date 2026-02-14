@@ -24,7 +24,7 @@
 | 4 | Combined fetch-and-cache function | Done |
 | 5 | Batch refresh for stale releases | Done |
 | 6 | Discogs search for seeding | Done |
-| 7 | Lint + full test pass | |
+| 7 | Lint + full test pass | Done |
 
 ## Notes
 
@@ -44,3 +44,4 @@
 - Plan 2 Step 4: `discogs.py` — Added `fetch_and_cache_release(client, conn, release_id)` async function: calls `get_release()` (returns False if not found), then `get_price_stats()` (None-safe), then `upsert_release()` with combined data. Lazy-imports `db.upsert_release` to avoid circular deps. 3 tests in `test_discogs_cache.py` (success with prices, 404 release, success without prices). All 58 tests pass (3 pre-existing failures in config/main), ruff clean.
 - Plan 2 Step 5: `discogs.py` — Added `refresh_stale_prices(client, conn, max_age_days=7)` async function: queries stale releases via `get_stale_releases()`, re-fetches prices via `get_price_stats()`, updates DB via `upsert_release()`. Per-release error handling (catches exceptions and continues). Returns count of successfully refreshed releases. 4 tests in `test_discogs_refresh.py` (stale-only refresh, skip on no prices, continue on error, refresh all with age=0). All 62 tests pass (same 3 pre-existing failures), ruff clean.
 - Plan 2 Step 6: `discogs.py` — Added `search_releases(query, format_=None, per_page=50)` async method on `DiscogsClient`: rate-limits, GETs `/database/search` with params (q, type=release, per_page, optional format), raises `DiscogsAPIError` on non-200. Parses `results` list into dicts with `release_id`, `title`, `format`, `catalog_no`. 4 tests in `test_discogs_search.py` (200 with 3 results, empty results, format param passthrough, 500 error). All 66 tests pass (same 3 pre-existing failures), ruff clean.
+- Plan 2 Step 7: `ruff check` on `discogs.py` + all test files — all checks passed. `pytest tests/test_discogs*.py -v` — 28/28 passed (1.19s). Full suite: 63 passed, 3 pre-existing failures unchanged. **Plan 2 complete.**
