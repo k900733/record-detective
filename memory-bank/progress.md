@@ -59,6 +59,19 @@
 | 5 | Alert sending function | Done |
 | 6 | Lint + full test pass | Done |
 
+## Plan 6: Main Orchestrator & Integration
+
+| Step | Description | Status |
+|------|------------|--------|
+| 1 | pipeline.py — scan_and_score() | Done |
+| 2 | eBay polling loop | |
+| 3 | Discogs refresh loop | |
+| 4 | Cleanup loop | |
+| 5 | __main__.py full async orchestrator | |
+| 6 | Graceful shutdown handling | |
+| 7 | End-to-end integration test | |
+| 8 | Final lint, test, smoke test | |
+
 ## Notes
 
 - Using python3.12 (`/usr/bin/python3.12`)
@@ -95,3 +108,4 @@
 - Plan 5 Step 4: `telegram_bot.py` — Added `create_bot(token, conn)` returning a configured `Application` (python-telegram-bot v22.6). Six command handlers: `/start` (welcome), `/help` (command list), `/add_search` (creates saved search via `db.add_search`), `/my_searches` (lists searches with ID/status), `/remove_search` (deactivates via `db.toggle_search`), `/set_threshold` (updates `min_deal_score` for all user searches, validated 0-1). DB connection passed via `bot_data["db"]`. 11 tests in `test_telegram_commands.py` (each handler + usage errors + create_bot wiring). All 14 telegram tests pass, ruff clean.
 - Plan 5 Step 5: `telegram_bot.py` — Added `send_deal_alerts(bot, conn, deals, affiliate_campaign_id="")` async function: fetches all active searches, filters by `min_deal_score <= deal.deal_score`, skips already-alerted `(chat_id, item_id)` pairs via `was_alerted()`, builds affiliate URL inline (eBay Partner Network params), formats via `format_deal_message()`, sends via `bot.send_message(parse_mode="HTML")`, logs via `log_alert()` and `mark_notified()`. Per-send error handling with logging. 7 tests in `test_telegram_alerts.py` (basic send, duplicate suppression, multi-chat, threshold filtering, affiliate URL, mark_notified, error continuation). All 29 scorer+telegram tests pass, ruff clean.
 - Plan 5 Step 6: `ruff check` on `scorer.py`, `telegram_bot.py` + all test files — all checks passed. `pytest tests/test_scorer*.py tests/test_telegram*.py -v` — 29/29 passed (0.33s). **Plan 5 complete.**
+- Plan 6 Step 1: `pipeline.py` — Created `scan_and_score(ebay_client, conn, search_query)` async function: searches eBay, extracts catalog number from title first (skips `get_item` if found), falls back to `get_item` + `extract_upc` for UPC enrichment, runs 3-tier `match_listing`, scores via `score_deal`, persists via `upsert_listing` + `update_listing_match`. 4 tests in `test_pipeline.py` (3-listings-1-deal, empty results, all-match-and-DB-stored, catalog-skips-get_item). All 4 pass, ruff clean. Full suite: 139 passed, 3 pre-existing failures unchanged.
