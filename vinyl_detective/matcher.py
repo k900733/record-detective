@@ -38,3 +38,24 @@ def match_by_catalog(conn, ebay_title: str) -> MatchResult | None:
         method="catalog_no",
         score=1.0,
     )  # 0.0 to 1.0
+
+
+def match_by_barcode(conn, upc: str | None) -> MatchResult | None:
+    """Tier 2: match by barcode/UPC."""
+    if not upc:
+        return None
+
+    from vinyl_detective.db import lookup_by_barcode
+
+    row = lookup_by_barcode(conn, upc)
+    if row is None:
+        return None
+
+    return MatchResult(
+        release_id=row["release_id"],
+        artist=row["artist"],
+        title=row["title"],
+        median_price=row.get("median_price"),
+        method="barcode",
+        score=1.0,
+    )
