@@ -33,8 +33,8 @@
 | 1 | EbayClient class with OAuth2 token management | Done |
 | 2 | Listing search method | Done |
 | 3 | Affiliate link generation | Done |
-| 4 | Listing detail fetch | |
-| 5 | UPC/catalog extraction helpers | |
+| 4 | Listing detail fetch | Done |
+| 5 | UPC/catalog extraction helpers | Done |
 | 6 | Lint + full test pass | |
 
 ## Notes
@@ -59,3 +59,5 @@
 - Plan 3 Step 1: `ebay.py` — `EbayClient` class with `httpx.AsyncClient` (base_url `api.ebay.com`, user-agent, 30s timeout), async context manager, `_ensure_token()` OAuth2 client-credentials flow (POST to `/identity/v1/oauth2/token` with Basic auth, 60s expiry buffer). `EbayAPIError` exception class. 4 tests in `test_ebay_auth.py` (first-call fetch, cached second call, refresh after expiry, 401 error). All 4 pass, ruff clean.
 - Plan 3 Step 2: `ebay.py` — Added `search_listings(query, limit=200)` async method: ensures token, rate-limits, GETs `/buy/browse/v1/item_summary/search` with Bearer auth, `EBAY_US` marketplace, `FIXED_PRICE` filter, Records category `176985`. Parses `itemSummaries` into dicts with `item_id`, `title`, `price`, `currency`, `condition`, `seller_rating`, `image_url`, `item_web_url`, `shipping`. 3 tests in `test_ebay_search.py` (2-item parse, empty results, 401 error). All 7 eBay tests pass, ruff clean.
 - Plan 3 Step 3: `ebay.py` — Added `make_affiliate_url(item_web_url, campaign_id)` method on `EbayClient`: returns URL unchanged if `campaign_id` is empty, otherwise appends eBay Partner Network params (`mkevt`, `mkcid`, `mkrid`, `campid`, `toolid`) via `urllib.parse`. Preserves existing query params. 3 tests in `test_ebay_affiliate.py` (full params, empty campaign, existing params preserved). All 10 eBay tests pass, ruff clean.
+- Plan 3 Step 4: `ebay.py` — Added `get_item(item_id)` async method: ensures token, rate-limits, GETs `/buy/browse/v1/item/{item_id}`, returns `None` on 404, raises `EbayAPIError` on other errors. Parses response into dict with `item_id`, `title`, `description`, `localized_aspects`, `item_location`, `price`, `currency`, `condition`, `item_web_url`. 3 tests in `test_ebay_item.py` (200 with UPC in aspects, 404, 500 error). All 13 eBay tests pass, ruff clean.
+- Plan 3 Step 5: `ebay.py` — Added 3 standalone extraction helpers: `extract_upc(item_aspects)` scans `localizedAspects` for UPC/EAN entries; `extract_catalog_no_from_title(title)` uses regex (`_CATALOG_RE`) to find catalog patterns like `BLP-4003`, `MFSL 1-234`, `APP 3014`; `normalize_catalog(cat_no)` strips spaces/dashes/underscores/dots and uppercases. 11 tests in `test_ebay_extract.py`. All 24 eBay tests pass, ruff clean.

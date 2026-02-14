@@ -1,5 +1,6 @@
 """eBay Browse API client with OAuth2 authentication."""
 
+import re
 import time
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -124,3 +125,56 @@ class EbayClient:
         flat = {k: v if isinstance(v, str) else v[0] for k, v in existing.items()}
         new_query = urlencode(flat)
         return urlunparse(parsed._replace(query=new_query))
+
+    async def get_item(self, item_id: str) -> dict | None:
+        """Fetch full item details for enrichment (UPC, catalog no, etc.)."""
+        await self._ensure_token()
+        await self.rate_limiter.wait()
+        resp = await self._client.get(
+            f"/buy/browse/v1/item/{item_id}",
+            headers={
+                "Authorization": f"Bearer {self._access_token}",
+                "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+            },
+        )
+        if resp.status_code == 404:
+            return None
+        if resp.status_code != 200:
+            raise EbayAPIError(resp.status_code, resp.text)
+        data = resp.json()
+        return {
+            "item_id": data["itemId"],
+            "title": data["title"],
+            "description": data.get("description"),
+            "localized_aspects": data.get("localizedAspects", []),
+            "item_location": data.get("itemLocation"),
+            "price": float(data["price"]["value"]),
+            "currency": data["price"]["currency"],
+            "condition": data.get("condition"),
+            "item_web_url": data.get("itemWebUrl"),
+        }
+
+
+# Catalog number pattern: 1-5 uppercase letters, optional space/dash, then digits
+# with optional dash+digits suffix (e.g. BLP-4003, MFSL 1-234, APP 3014, SRV-123-45)
+_CATALOG_RE = re.compile(r"\b([A-Z]{1,5}[\s\-]?\d+(?:[\-]\d+)*)\b")
+
+
+def extract_upc(item_aspects: list[dict]) -> str | None:
+    """Extract UPC or EAN from localizedAspects list."""
+    for aspect in item_aspects:
+        name = aspect.get("name", "").upper()
+        if "UPC" in name or "EAN" in name:
+            return aspect.get("value")
+    return None
+
+
+def extract_catalog_no_from_title(title: str) -> str | None:
+    """Extract catalog number pattern from eBay listing title."""
+    match = _CATALOG_RE.search(title)
+    return match.group(1) if match else None
+
+
+def normalize_catalog(cat_no: str) -> str:
+    """Strip spaces, dashes, underscores, dots and uppercase."""
+    return re.sub(r"[\s\-_.]", "", cat_no).upper()
