@@ -46,7 +46,7 @@
 | 3 | Tier 2 — barcode/UPC matching | Done |
 | 4 | Tier 3 — fuzzy artist+title matching | Done |
 | 5 | Unified match_listing() function | Done |
-| 6 | Lint + full test pass | |
+| 6 | Lint + full test pass | Done |
 
 ## Plan 5: Deal Scorer & Telegram Alerts
 
@@ -70,7 +70,7 @@
 | 5 | __main__.py full async orchestrator | Done |
 | 6 | Graceful shutdown handling | Done |
 | 7 | End-to-end integration test | Done |
-| 8 | Final lint, test, smoke test | |
+| 8 | Final lint, test, smoke test | Done |
 
 ## Notes
 
@@ -115,3 +115,4 @@
 - Plan 6 Step 5: `__main__.py` — Full async orchestrator via `run()` coroutine. Sets up logging (INFO, stdout), loads config, inits DB, creates `RateLimiter` instances (Discogs 60/min, eBay ~3/min), creates Telegram `Application` via `create_bot()`. Uses python-telegram-bot v22 manual lifecycle: `async with app` + `app.start()` + `updater.start_polling()` inside existing `asyncio.run()`. Launches 3 background tasks via `asyncio.create_task`: `poll_ebay_loop`, `refresh_discogs_loop`, `cleanup_stale_loop`. Registers `SIGINT`/`SIGTERM` signal handlers that set an `asyncio.Event` for graceful stop. On signal: cancels tasks, stops updater, stops app, closes DB. `test_main.py` trimmed to 1 env-validation test (subprocess). New `test_main_integration.py` with 3 async tests: init+shutdown, DB schema verification, loop argument passing (all mock external deps). All 4 pass, ruff clean. Full suite: 151 passed, 2 pre-existing failures (config tests) unchanged.
 - Plan 6 Step 6: Graceful shutdown — All 3 loops (`poll_ebay_loop`, `refresh_discogs_loop`, `cleanup_stale_loop`) now accept `shutdown_event` kwarg. Loops use `while not shutdown_event.is_set()` and `asyncio.wait_for(event.wait(), timeout=N)` instead of `while True` + `asyncio.sleep(N)`, allowing prompt exit on signal without task cancellation. `__main__.py` passes the `stop` event to all loops; removed manual `task.cancel()` — loops self-terminate. Backward compatible (`shutdown_event=None` falls back to `while True`). `test_main_integration.py` updated to assert `shutdown_event` kwarg. New `test_shutdown.py` with 3 tests: event stops run(), log message verification, loops exit promptly on event. All 17 affected tests pass, ruff clean. Full suite: 154 passed, 2 pre-existing failures unchanged.
 - Plan 6 Step 7: `test_e2e.py` — 5 end-to-end tests exercising real matching engine (no mocks on matcher/scorer). Seeds in-memory DB with 3 Discogs releases + 1 saved search. Mocks only eBay HTTP calls (5 listings: 2 underpriced, 1 overpriced match, 2 no-match) and Telegram `send_message`. Tests all 3 match tiers: barcode (Miles Davis via UPC from `get_item`), catalog (Coltrane via `AS-77` in title), fuzzy (Monk matches but overpriced). Validates: 2 deals scored, DB persistence with correct `match_release_id`/`match_method`/`deal_score`, 2 Telegram alerts sent, dedup on re-run (0 repeat alerts), alert_log entries. All 5 pass, ruff clean. Full suite: 159 passed, 2 pre-existing config failures unchanged.
+- Plan 6 Step 8: Final lint + test pass + live smoke test. `ruff check` clean. Fixed 2 pre-existing config test failures (root cause: `load_dotenv()` re-loading `.env` after `monkeypatch.delenv()`; fix: patch to no-op). Fixed eBay OAuth bug: `_ensure_token()` used raw `content=` string instead of `data=` dict, so scope URL wasn't URL-encoded — caused `invalid_client` 401. Changed to `data={"grant_type": "client_credentials", "scope": self.SCOPE}` with httpx auto-encoding. Live smoke test verified: Discogs search/fetch/cache (3 releases seeded), eBay OAuth + Browse API search (5 listings), full pipeline match (barcode 100% on Miles Davis), deal scoring (6% below median). **161/161 tests pass.** Telegram verified: @record_detective_bot connected, long-polling active, graceful shutdown confirmed. Full app startup test passed (DB init, Telegram polling, Discogs refresh loop, cleanup loop, SIGTERM shutdown in <1s). **Plan 6 complete.**

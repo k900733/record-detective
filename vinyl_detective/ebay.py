@@ -50,9 +50,10 @@ class EbayClient:
             return
         resp = await self._client.post(
             self.TOKEN_URL,
-            content="grant_type=client_credentials"
-            f"&scope={self.SCOPE}",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "grant_type": "client_credentials",
+                "scope": self.SCOPE,
+            },
             auth=(self._app_id, self._cert_id),
         )
         if resp.status_code != 200:

@@ -39,6 +39,7 @@ def test_load_config_missing_key(monkeypatch):
     for k, v in REQUIRED.items():
         monkeypatch.setenv(k, v)
     monkeypatch.delenv("DISCOGS_TOKEN")
+    monkeypatch.setattr("vinyl_detective.config.load_dotenv", lambda: None)
     with pytest.raises(ValueError, match="DISCOGS_TOKEN"):
         load_config()
 
@@ -46,6 +47,7 @@ def test_load_config_missing_key(monkeypatch):
 def test_load_config_multiple_missing(monkeypatch):
     for k in REQUIRED:
         monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr("vinyl_detective.config.load_dotenv", lambda: None)
     with pytest.raises(ValueError, match="DISCOGS_TOKEN") as exc_info:
         load_config()
     msg = str(exc_info.value)
